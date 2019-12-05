@@ -1,19 +1,21 @@
 from typing import Iterable, Tuple, List, Set, Dict
 
-def create_path(program: str, start: Tuple[(int, int)] = (0, 0)) -> List[Tuple[int, int]]:
-    p = compile_to_tuples(program)
+Instruction = Tuple[str, int]
+Point = Tuple[int, int]
+
+def create_path(program: str, start: Point = (0, 0)) -> List[Point]:
+    p = compile(program)
     path = [start]
     for instruction in p:
         path.extend(process_instruction(instruction, start=path[-1]))
     return path[1:]
 
-def compile_to_tuples(program: str) -> Iterable[Tuple[str, int]]:
+def compile(program: str) -> Iterable[Instruction]:
     instructions = program.split(',')
     for instruction in instructions:
         yield instruction[0], int(instruction[1:])
 
-def process_instruction(
-    instruction: Tuple[str, int], start: Tuple[int, int]) -> List[Tuple[int, int]]:
+def process_instruction(instruction: Instruction, start: Point) -> List[Point]:
     opcode, value = instruction
     if opcode == 'R':
         return [(start[0] + i + 1, start[1]) for i in range(value)]
@@ -26,12 +28,12 @@ def process_instruction(
     else:
         raise ValueError(f"Opcode {opcode} unknown.")
     
-def get_intersection_points(program_1: str, program_2: str) -> Set[Tuple[int, int]]:
+def get_intersection_points(program_1: str, program_2: str) -> Set[Point]:
     path_1, path_2 = create_path(program_1), create_path(program_2)
     return set(path_1) & set(path_2)
 
 def wire_distance_to_intersection_points(
-    program_1: str, program_2: str) -> Tuple[Dict[Tuple[int, int], int], Dict[Tuple[int, int], int]]:
+    program_1: str, program_2: str) -> Tuple[Dict[Point, int], Dict[Point, int]]:
     path_1, path_2 = create_path(program_1), create_path(program_2)
     intersections = set(path_1) & set(path_2)
     distance_lookup_1 = {point: n for n, point in enumerate(path_1, start=1)
@@ -40,7 +42,7 @@ def wire_distance_to_intersection_points(
                                    if point in intersections}
     return distance_lookup_1, distance_lookup_2
 
-def manhattan_norm(t: Tuple[int, int]) -> int:
+def manhattan_norm(t: Point) -> int:
     return abs(t[0]) + abs(t[1])
 
 def min_manhattan_norm(program_1: str, program_2: str) -> int:
@@ -55,7 +57,7 @@ def min_wire_distance(program_1: str, program_2: str) -> int:
     return min(distance_lookup.values())
 
 
-assert list(compile_to_tuples("R75,D30,R83,U83")) == [("R", 75), ("D", 30), ("R", 83), ("U", 83)]
+assert list(compile("R75,D30,R83,U83")) == [("R", 75), ("D", 30), ("R", 83), ("U", 83)]
 assert process_instruction(('U', 5), start=(0, 0)) == [(0, 1), (0, 2), (0, 3), (0, 4), (0, 5)]
 assert process_instruction(('D', 5), start=(0, 0)) == [(0, -1), (0, -2), (0, -3), (0, -4), (0, -5)]
 assert process_instruction(('R', 5), start=(0, 0)) == [(1, 0), (2, 0), (3, 0), (4, 0), (5, 0)]
