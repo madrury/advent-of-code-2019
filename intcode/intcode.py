@@ -46,7 +46,18 @@ OpcodeReturn = Tuple[Program, DoHalt]
 
 def run(program: Program) -> Program:
     halt = False
+    output = []
     while not halt:
+        program, halt = run_until_output(program)
+        output.extend(program.output)
+        program.output = []
+    # Restore the output.
+    program.output = output
+    return program
+
+def run_until_output(program: Program) -> Tuple[Program, bool]:
+    halt = False
+    while not (halt or program.output):
         full_opcode = program.get_opcode()
         opcode, parameter_modes = parse_opcode(full_opcode)
         operation, n_parameters = OP_CODE_TABLE[opcode]
@@ -56,7 +67,8 @@ def run(program: Program) -> Program:
         parameters = program[
             program.instruction_ptr + 1 : program.instruction_ptr + n_parameters + 1]
         program, halt = operation(program, parameters, parameter_modes)
-    return program
+    return program, halt
+
 
 def parse_opcode(full_opcode: OpCode) -> Tuple[OpCode, OpCodeParameterModes]:
     s = str(full_opcode)
