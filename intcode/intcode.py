@@ -22,12 +22,16 @@ class Program:
         self.code = code
         self.input = input if input else []
         self.output = []
+        self.instruction_ptr = 0
     
     def __getitem__(self, idxr):
         return self.code[idxr]
     
     def __setitem__(self, idxr, val):
         self.code[idxr] = val
+    
+    def get_opcode(self):
+        return self[self.instruction_ptr]
 
 
 # Type Definitions
@@ -37,22 +41,21 @@ OpCodeParameters = List[int]
 OpCodeParameterModes = List[int]
 InstructionPointer = int
 DoHalt = bool
-OpcodeReturn = Tuple[Program, InstructionPointer, DoHalt]
+OpcodeReturn = Tuple[Program, DoHalt]
 
 
 def run(program: Program) -> Program:
-    instruction_ptr = 0
     halt = False
     while not halt:
-        full_opcode = program[instruction_ptr]
+        full_opcode = program.get_opcode()
         opcode, parameter_modes = parse_opcode(full_opcode)
         operation, n_parameters = OP_CODE_TABLE[opcode]
         # Add imferred parameter modes of zero.
         if len(parameter_modes) != n_parameters:
             parameter_modes = parameter_modes + [0]*(n_parameters - len(parameter_modes))
-        parameters = program[instruction_ptr + 1 : instruction_ptr + n_parameters + 1]
-        program, instruction_ptr, halt = operation(
-            program, parameters, parameter_modes, instruction_ptr)
+        parameters = program[
+            program.instruction_ptr + 1 : program.instruction_ptr + n_parameters + 1]
+        program, halt = operation(program, parameters, parameter_modes)
     return program
 
 def parse_opcode(full_opcode: OpCode) -> Tuple[OpCode, OpCodeParameterModes]:
@@ -81,91 +84,88 @@ def lookup_parameters(
 def add(
     program: Program, 
     parameters: OpCodeParameters, 
-    parameter_modes: OpCodeParameterModes, 
-    instruction_ptr: int) -> OpcodeReturn:
+    parameter_modes: OpCodeParameterModes) -> OpcodeReturn:
     a1, a2 = lookup_parameters(program, parameters[:2], parameter_modes[:2])
     address = parameters[2]
     program[address] = a1 + a2
-    return program, instruction_ptr + len(parameters) + 1, False
+    program.instruction_ptr += len(parameters) + 1
+    return program, False
 
 def multiply(
     program: Program, 
     parameters: OpCodeParameters, 
-    parameter_modes: OpCodeParameterModes, 
-    instruction_ptr: int) -> OpcodeReturn:
+    parameter_modes: OpCodeParameterModes) -> OpcodeReturn:
     m1, m2 = lookup_parameters(program, parameters[:2], parameter_modes[:2])
     address = parameters[2]
     program[address] = m1 * m2
-    return program, instruction_ptr + len(parameters) + 1, False
+    program.instruction_ptr += len(parameters) + 1
+    return program, False
 
 def input_(
     program: Program, 
     parameters: OpCodeParameters, 
-    parameter_modes: OpCodeParameterModes, 
-    instruction_ptr: int) -> OpcodeReturn:
+    parameter_modes: OpCodeParameterModes) -> OpcodeReturn:
     val = program.input.pop()
     program[parameters[0]] = val
-    return program, instruction_ptr + len(parameters) + 1, False
+    program.instruction_ptr += len(parameters) + 1
+    return program, False
 
 def output(
     program: Program, 
     parameters: OpCodeParameters, 
-    parameter_modes: OpCodeParameterModes, 
-    instruction_ptr: int) -> OpcodeReturn:
+    parameter_modes: OpCodeParameterModes) -> OpcodeReturn:
     parameter = lookup_parameter(program, parameters[0], parameter_modes[0])
     program.output.append(parameter)
-    return program, instruction_ptr + len(parameters) + 1, False
+    program.instruction_ptr += len(parameters) + 1
+    return program, False
 
 def jump_if_true(
     program: Program, 
     parameters: OpCodeParameters, 
-    parameter_modes: OpCodeParameterModes, 
-    instruction_ptr: int) -> OpcodeReturn:
+    parameter_modes: OpCodeParameterModes) -> OpcodeReturn:
     condition, address = lookup_parameters(program, parameters, parameter_modes)
     if condition:
-        instruction_ptr = address
+        program.instruction_ptr = address
     else:
-        instruction_ptr += len(parameters) + 1
-    return program, instruction_ptr, False
+        program.instruction_ptr += len(parameters) + 1
+    return program, False
 
 def jump_if_false(
     program: Program, 
     parameters: OpCodeParameters, 
-    parameter_modes: OpCodeParameterModes, 
-    instruction_ptr: int) -> OpcodeReturn:
+    parameter_modes: OpCodeParameterModes) -> OpcodeReturn:
     condition, address = lookup_parameters(program, parameters, parameter_modes)
     if not condition:
-        instruction_ptr = address
+        program.instruction_ptr = address
     else:
-        instruction_ptr += len(parameters) + 1
-    return program, instruction_ptr, False
+        program.instruction_ptr += len(parameters) + 1
+    return program, False
 
 def less_than(
     program: Program, 
     parameters: OpCodeParameters, 
-    parameter_modes: OpCodeParameterModes, 
-    instruction_ptr: int) -> OpcodeReturn:
+    parameter_modes: OpCodeParameterModes) -> OpcodeReturn:
     a, b = lookup_parameters(program, parameters[:2], parameter_modes[:2])
     address = parameters[2]
     program[address] = int(a < b)
-    return program, instruction_ptr + len(parameters) + 1, False 
+    program.instruction_ptr += len(parameters) + 1
+    return program, False 
 
 def equals(
     program: Program, 
     parameters: OpCodeParameters, 
-    parameter_modes: OpCodeParameterModes, 
-    instruction_ptr: int) -> OpcodeReturn:
+    parameter_modes: OpCodeParameterModes) -> OpcodeReturn:
     a, b = lookup_parameters(program, parameters[:2], parameter_modes[:2])
     address = parameters[2]
     program[address] = int(a == b)
-    return program, instruction_ptr + len(parameters) + 1, False 
+    program.instruction_ptr += len(parameters) + 1
+    return program, False 
     
 def halt(
     program: Program, 
     parameters: OpCodeParameters, 
-    parameter_modes: OpCodeParameterModes, 
-    instruction_ptr: int) -> OpcodeReturn:
-    return program, instruction_ptr, True
+    parameter_modes: OpCodeParameterModes) -> OpcodeReturn:
+    return program, True
 
 
 OP_CODE_TABLE = {
