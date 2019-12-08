@@ -1,14 +1,5 @@
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
-# Type Definitions
-Program = List[int]
-OpCode = int
-OpcodeArity = int
-OpCodeParameters = List[int]
-OpCodeParameterModes = List[int]
-InstructionPointer = int
-DoHalt = bool
-OpcodeReturn = Tuple[Program, InstructionPointer, DoHalt]
 
 # Constants
 POSITION_MODE = 0
@@ -23,6 +14,30 @@ JUMP_IF_FALSE_OPCODE = 6
 LESS_THAN_OPCODE = 7
 EQUALS_OPCODE = 8
 HALT_OP_CODE = 99
+
+
+class Program:
+
+    def __init__(self, code: List[int], input: Optional[List[int]]):
+        self.code = code
+        self.input = input if input else []
+        self.output = []
+    
+    def __getitem__(self, idxr):
+        return self.code[idxr]
+    
+    def __setitem__(self, idxr, val):
+        self.code[idxr] = val
+
+
+# Type Definitions
+OpCode = int
+OpcodeArity = int
+OpCodeParameters = List[int]
+OpCodeParameterModes = List[int]
+InstructionPointer = int
+DoHalt = bool
+OpcodeReturn = Tuple[Program, InstructionPointer, DoHalt]
 
 
 def run(program: Program) -> Program:
@@ -88,7 +103,7 @@ def input_(
     parameters: OpCodeParameters, 
     parameter_modes: OpCodeParameterModes, 
     instruction_ptr: int) -> OpcodeReturn:
-    val = int(input('> '))
+    val = program.input.pop()
     program[parameters[0]] = val
     return program, instruction_ptr + len(parameters) + 1, False
 
@@ -98,7 +113,7 @@ def output(
     parameter_modes: OpCodeParameterModes, 
     instruction_ptr: int) -> OpcodeReturn:
     parameter = lookup_parameter(program, parameters[0], parameter_modes[0])
-    print(parameter)
+    program.output.append(parameter)
     return program, instruction_ptr + len(parameters) + 1, False
 
 def jump_if_true(
