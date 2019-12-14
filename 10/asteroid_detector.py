@@ -49,3 +49,19 @@ def find_best_station_position(chart: Chart) -> Tuple[Point, int]:
 
 chart1 = read_asteroid_chart(open('./data/chart-1.txt', 'r'))
 assert find_best_station_position(chart1) == ((3, 4), 8)
+
+chart2 = read_asteroid_chart(open('./data/chart-2.txt', 'r'))
+assert find_best_station_position(chart2) == ((5, 8), 33)
+
+chart3 = read_asteroid_chart(open('./data/chart-3.txt', 'r'))
+assert find_best_station_position(chart3) == ((1, 2), 35)
+
+chart4 = read_asteroid_chart(open('./data/chart-4.txt', 'r'))
+assert find_best_station_position(chart4) == ((6, 3), 41)
+
+chart5 = read_asteroid_chart(open('./data/chart-5.txt', 'r'))
+assert find_best_station_position(chart5) == ((11, 13), 210)
+
+chart = read_asteroid_chart(open('./data/chart.txt', 'r'))
+location, n_visible = find_best_station_position(chart)
+print(f"Best space station location is {location} with {n_visible} visible asteroids")
