@@ -59,13 +59,13 @@ def run(program: Program) -> Program:
     program.output = output
     return program
 
-def run_until_output(program: Program) -> Tuple[Program, bool]:
+def run_until_output(program: Program, ouput_len: int=1) -> Tuple[Program, bool]:
     halt = False
-    while not (halt or program.output):
+    while not (halt or len(program.output) >= ouput_len):
         full_opcode = program.get_opcode()
         opcode, parameter_modes = parse_opcode(full_opcode)
         operation, n_parameters = OP_CODE_TABLE[opcode]
-        # Add imferred parameter modes of zero.
+        # Add inferred parameter modes of zero.
         if len(parameter_modes) != n_parameters:
             parameter_modes = parameter_modes + [0]*(n_parameters - len(parameter_modes))
         parameters = program[
