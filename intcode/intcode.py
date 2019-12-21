@@ -1,4 +1,4 @@
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Optional, IO
 
 # You need to make relative opcode writes work.
 
@@ -28,14 +28,26 @@ class Program:
         self.instruction_ptr = 0
         self.relative_base = 0
     
-    def __getitem__(self, idxr):
+    def __getitem__(self, idxr) -> None:
         return self.code[idxr]
     
-    def __setitem__(self, idxr, val):
+    def __setitem__(self, idxr, val) -> None:
         self.code[idxr] = val
     
-    def get_opcode(self):
+    def get_opcode(self) -> int:
         return self[self.instruction_ptr]
+    
+    def reset_output(self) -> None:
+        self.output = []
+    
+    def add_input(self, *inputs) -> None:
+        self.input.extend(inputs)
+    
+    @classmethod
+    def from_file(cls, f: IO) -> 'Program':
+        code = [int(x) for x in f.read().strip().split(',')]
+        return cls(code=code)
+
 
 
 # Type Definitions
@@ -59,9 +71,9 @@ def run(program: Program) -> Program:
     program.output = output
     return program
 
-def run_until_output(program: Program, ouput_len: int=1) -> Tuple[Program, bool]:
+def run_until_output(program: Program, output_len: int=1) -> Tuple[Program, bool]:
     halt = False
-    while not (halt or len(program.output) >= ouput_len):
+    while not (halt or len(program.output) >= output_len):
         full_opcode = program.get_opcode()
         opcode, parameter_modes = parse_opcode(full_opcode)
         operation, n_parameters = OP_CODE_TABLE[opcode]
