@@ -1,4 +1,4 @@
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict, List, Iterable, Optional
 from intcode.intcode import Program, run_until_output
 from time import sleep
 import random
@@ -15,13 +15,13 @@ TURN_RIGHT = {
 TURN_LEFT = {
     NORTH: WEST, WEST: SOUTH, SOUTH: EAST, EAST: NORTH
 }
-UNEXPLORED, EMPTY, WALL, OXYGEN = 0, 1, 2, 3
+UNEXPLORED, EMPTY, WALL, OXYGEN, GAS = 0, 1, 2, 3, 4
 HIT_WALL, MOVE_SUCCESS, FOUND_OXYGEN = 0, 1, 2
 
-TILE_DRAW_ARRAY = np.array([' ', '.', '#', 'o'])
+TILE_DRAW_ARRAY = np.array([' ', ' ', '#', 'o', '~'])
 
 
-def next_position(position: Point, input: int):
+def next_position(position: Point, input: int) -> Point:
     if input == NORTH:
         return (position[0], position[1] + 1)
     elif input == SOUTH:
@@ -32,7 +32,7 @@ def next_position(position: Point, input: int):
         return (position[0] + 1, position[1])
 
 
-def explore(program: Program):
+def explore(program: Program) -> Map:
     map: Map = {}
     position: Point = (0, 0)
     current_direction, output = NORTH, None
@@ -89,7 +89,42 @@ def explore(program: Program):
     return map
 
 
-def draw_map(map: Map, position) -> None:
+def find_shortest_path(map: Map, origin: Point) -> List[Point]:
+    all_positions = {p for p in map if map[p] in (EMPTY, OXYGEN)}
+    pervious: Dict[Point, Point] = {}
+    distances = {p: 10**4 for p in all_positions}
+    distances[origin] = 0
+    # Dijkstra's algorithm.
+    while all_positions:
+        min_distance_position = min(
+            {p: dist for p, dist in distances.items() if p in all_positions},
+            key=distances.get
+        )
+        all_positions.remove(min_distance_position)
+        if map[min_distance_position] == OXYGEN:
+            break
+        for p in adjacent_positions(map, min_distance_position):
+            alt_distance = distances[min_distance_position] + 1
+            if alt_distance < distances[p]:
+                distances[p] = alt_distance
+                pervious[p] = min_distance_position
+    # Now find the shortet path.
+    path: List[Point] = []
+    current = min_distance_position
+    while current != origin:
+        path.append(current)
+        current = pervious[current]
+    return path
+
+
+def adjacent_positions(map: Map, position: Point) -> Iterable[Point]:
+    for direction in [NORTH, SOUTH, EAST, WEST]:
+        attempt = next_position(position, direction)
+        if map[attempt] in (EMPTY, OXYGEN):
+            yield attempt
+
+
+def draw_map(map: Map, position: Optional[Point]=None, path: Optional[List[Point]]=None) -> None:
     if not map:
         return
     minx = min(k[0] for k in map)
@@ -101,11 +136,17 @@ def draw_map(map: Map, position) -> None:
     for (x, y), id in map.items():
         area[x - 25,  y - 25] = id
     strrep = TILE_DRAW_ARRAY[area]
-    strrep[(position[0] - 25, position[1] - 25)] = '@'
+    if position:
+        strrep[(position[0] - 25, position[1] - 25)] = '@'
+    if path:
+        for p in path:
+            strrep[p[0] - 25, p[1] - 25] = '.'
     for row in strrep.T:
         print(''.join(row))
 
-
 program = Program.from_file(open('./data/program.txt'))
 map = explore(program)
-draw_map(map, (0, 0))
+path = find_shortest_path(map, (0, 0))
+draw_map(map, (0, 0), path[1:])
+
+print(f"The shortest path to the oxygen is {len(path)} steps.")
