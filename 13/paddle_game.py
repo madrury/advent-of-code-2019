@@ -47,7 +47,7 @@ class Breakout:
             self.paddle, self.ball = game.get_paddle_position(), game.get_ball_position()
             self.move_paddle_towards_ball()
             self.program.reset_output()
-            #subprocess.call('clear', shell=True)
+            subprocess.call('clear', shell=True)
         # return screen
     
     def move_paddle_towards_ball(self) -> None:
