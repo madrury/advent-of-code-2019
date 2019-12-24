@@ -1,7 +1,6 @@
 from typing import Tuple, Dict, List, Set, Iterable, Optional
 from intcode.intcode import Program, run_until_output
 from time import sleep
-import random
 import numpy as np
 
 Point = Tuple[int, int]
@@ -30,6 +29,7 @@ def next_position(position: Point, input: int) -> Point:
         return (position[0] - 1, position[1])
     elif input == EAST:
         return (position[0] + 1, position[1])
+    raise ValueError("Unknown direction.")
 
 
 def adjacent_positions(map: Map, position: Point) -> Iterable[Point]:
@@ -131,7 +131,7 @@ def get_oxygen_position(map: Map) -> Point:
 
 def spawn_gas(map: Map, origin: Point) -> int:
     open_positions = {p for p in map if map[p] in (EMPTY, OXYGEN)}
-    current_gas_boundary: set[Point] = {origin}
+    current_gas_boundary: Set[Point] = {origin}
     has_gas: Set[Point] = {origin}
     map[origin] = GAS
     i = 0
