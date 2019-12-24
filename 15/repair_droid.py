@@ -1,4 +1,4 @@
-from typing import Tuple, Dict, List, Iterable, Optional
+from typing import Tuple, Dict, List, Set, Iterable, Optional
 from intcode.intcode import Program, run_until_output
 from time import sleep
 import random
@@ -30,6 +30,13 @@ def next_position(position: Point, input: int) -> Point:
         return (position[0] - 1, position[1])
     elif input == EAST:
         return (position[0] + 1, position[1])
+
+
+def adjacent_positions(map: Map, position: Point) -> Iterable[Point]:
+    for direction in [NORTH, SOUTH, EAST, WEST]:
+        attempt = next_position(position, direction)
+        if map[attempt] in (EMPTY, OXYGEN):
+            yield attempt
 
 
 def explore(program: Program) -> Map:
@@ -70,7 +77,7 @@ def explore(program: Program) -> Map:
             program.add_input(current_direction)
             _, _ = run_until_output(program)
             output = program.output.pop()
-            # If we hit a well, there is still a wall to our right, so we
+            # If we hit a wall, there is still a wall to our right, so we
             # should keep going.
             if output == HIT_WALL:
                 map[next_position(position, current_direction)] = WALL
@@ -116,12 +123,29 @@ def find_shortest_path(map: Map, origin: Point) -> List[Point]:
         current = pervious[current]
     return path
 
+def get_oxygen_position(map: Map) -> Point:
+    for p, obj in map.items():
+        if obj == OXYGEN:
+            return p
+    raise ValueError("Oxygen not found.")
 
-def adjacent_positions(map: Map, position: Point) -> Iterable[Point]:
-    for direction in [NORTH, SOUTH, EAST, WEST]:
-        attempt = next_position(position, direction)
-        if map[attempt] in (EMPTY, OXYGEN):
-            yield attempt
+def spawn_gas(map: Map, origin: Point) -> int:
+    open_positions = {p for p in map if map[p] in (EMPTY, OXYGEN)}
+    current_gas_boundary: set[Point] = {origin}
+    has_gas: Set[Point] = {origin}
+    map[origin] = GAS
+    i = 0
+    while has_gas != open_positions:
+        new_gas_boundary: Set[Point] = set()
+        for bdry in current_gas_boundary:
+            for p in adjacent_positions(map, bdry):
+                if p not in has_gas:
+                    map[p] = GAS
+                    has_gas.add(p)
+                    new_gas_boundary.add(p)
+        i += 1
+        current_gas_boundary = new_gas_boundary
+    return i
 
 
 def draw_map(map: Map, position: Optional[Point]=None, path: Optional[List[Point]]=None) -> None:
@@ -147,6 +171,9 @@ def draw_map(map: Map, position: Optional[Point]=None, path: Optional[List[Point
 program = Program.from_file(open('./data/program.txt'))
 map = explore(program)
 path = find_shortest_path(map, (0, 0))
-draw_map(map, (0, 0), path[1:])
 
-print(f"The shortest path to the oxygen is {len(path)} steps.")
+# draw_map(map, (0, 0), path[1:])
+# print(f"The shortest path to the oxygen is {len(path)} steps.")
+
+i = spawn_gas(map, get_oxygen_position(map))
+print(f"It takes {i} turns to fill the ship with oxygen.")
