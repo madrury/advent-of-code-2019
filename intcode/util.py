@@ -9,7 +9,7 @@ PATH_CHAR = '.'
 
 def draw_map(
     map: Dict[Point, int], 
-    draw_array: Union[List[str], Dict[int, str]],
+    conversion_table: Union[List[str], Dict[int, str]],
     position: Optional[Point]=None, 
     path: Optional[List[Point]]=None) -> None:
     if not map:
@@ -19,14 +19,24 @@ def draw_map(
     miny = min(k[1] for k in map)
     maxy = max(k[1] for k in map)
     area = np.zeros(shape=(maxx - minx + 1, maxy - miny + 1), dtype=int)
-    area = np.zeros(shape=(50, 50), dtype=int)
     for (x, y), id in map.items():
-        area[x - 25,  y - 25] = id
-    strrep = draw_array[area]
+        area[x - minx,  y - miny] = id
+    strrep = conversion_table[area]
     if position:
-        strrep[(position[0] - 25, position[1] - 25)] = POSITION_CHAR
+        strrep[(position[0] - minx, position[1] - miny)] = POSITION_CHAR
     if path:
         for p in path:
-            strrep[p[0] - 25, p[1] - 25] = PATH_CHAR
+            strrep[p[0] - minx, p[1] - miny] = PATH_CHAR
     for row in strrep.T:
         print(''.join(row))
+
+
+def draw_array(
+    arr: Union[List[int], np.array],
+    conversion_table: Union[List[str], Dict[int, str]]) -> None:
+    arr = np.asarray(arr)
+    if isinstance(conversion_table, dict):
+        conversion_table = np.array([conversion_table[i] for i in range(256)])
+    strrep = conversion_table[arr]
+    for row in strrep:
+        print(''.join(row), end='')
