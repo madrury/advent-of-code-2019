@@ -46,10 +46,10 @@ TEST_SIGNAL = '03036732577212944063491565474664'
 
 # assert str(ft(parse_into_signal(RAW_SIGNAL), 100))[:8] == '70856418'
 
-backsolved = repeat_backsolve(parse_into_signal(TEST_SIGNAL, repeat=10_000), n_times=100)
-message_location = int(TEST_SIGNAL[:7])
-message = backsolved[message_location : message_location + 8]
-assert message == [8, 4, 4, 6, 2, 0, 2, 6]
+# backsolved = repeat_backsolve(parse_into_signal(TEST_SIGNAL, repeat=10_000), n_times=100)
+# message_location = int(TEST_SIGNAL[:7])
+# message = backsolved[message_location : message_location + 8]
+# assert message == [8, 4, 4, 6, 2, 0, 2, 6]
 
 backsolved = repeat_backsolve(parse_into_signal(RAW_SIGNAL, repeat=10_000), n_times=100)
 message_location = int(RAW_SIGNAL[:7])

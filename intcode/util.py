@@ -39,4 +39,4 @@ def draw_array(
         conversion_table = np.array([conversion_table[i] for i in range(256)])
     strrep = conversion_table[arr]
     for row in strrep:
-        print(''.join(row), end='')
+        print(''.join(row))
