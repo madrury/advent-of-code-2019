@@ -1,4 +1,4 @@
-from typing import Tuple, List, Optional, IO
+from typing import Tuple, List, Optional, Callable, IO, Union, overload
 
 # You need to make relative opcode writes work.
 
@@ -28,7 +28,15 @@ class Program:
         self.instruction_ptr = 0
         self.relative_base = 0
     
-    def __getitem__(self, idxr) -> None:
+    @overload
+    def __getitem__(self, idxr: int) -> int:
+        pass
+    
+    @overload
+    def __getitem__(self, idxr: slice) -> List[int]:
+        pass
+
+    def __getitem__(self, idxr):
         return self.code[idxr]
     
     def __setitem__(self, idxr, val) -> None:
@@ -71,20 +79,26 @@ def run(program: Program) -> Program:
     program.output = output
     return program
 
-def run_until_output(program: Program, output_len: int=1) -> Tuple[Program, bool]:
+def run_until_predicate(program: Program, predicate: Callable[[List[int]], bool]) -> Tuple[Program, bool]:
     halt = False
-    while not (halt or len(program.output) >= output_len):
+    while not (halt or predicate(program.output)):
         full_opcode = program.get_opcode()
         opcode, parameter_modes = parse_opcode(full_opcode)
         operation, n_parameters = OP_CODE_TABLE[opcode]
         # Add inferred parameter modes of zero.
         if len(parameter_modes) != n_parameters:
             parameter_modes = parameter_modes + [0]*(n_parameters - len(parameter_modes))
-        parameters = program[
-            program.instruction_ptr + 1 : program.instruction_ptr + n_parameters + 1]
+        parameters: List[int] = program[program.instruction_ptr + 1 : program.instruction_ptr + n_parameters + 1]
         program, halt = operation(program, parameters, parameter_modes)
     return program, halt
 
+def run_until_output(program: Program, output_len: int=1) -> Tuple[Program, bool]:
+    predicate = lambda x: len(x) >= output_len
+    return run_until_predicate(program, predicate)
+
+def run_until_matches(program: Program, outseq: List[int]) -> Tuple[Program, bool]:
+    predicate = lambda x: len(x) >= len(outseq) and x[-len(outseq):] == outseq
+    return run_until_predicate(program, predicate)
 
 def parse_opcode(full_opcode: OpCode) -> Tuple[OpCode, OpCodeParameterModes]:
     s = str(full_opcode)
