@@ -27,6 +27,10 @@ class Program:
         self.output: List[int] = []
         self.instruction_ptr = 0
         self.relative_base = 0
+        # Flag for if program is in restored state, entered upon breaking for input.
+        self.restore = False
+        # Memory slot for an opcode from an input call.
+        self.opcode_memory: Optional[int] = None
     
     @overload
     def __getitem__(self, idxr: int) -> int:
@@ -68,22 +72,24 @@ DoHalt = bool
 OpcodeReturn = Tuple[Program, DoHalt]
 
 
-def run(program: Program) -> Program:
-    halt = False
-    output = []
-    while not halt:
-        program, halt = run_until_output(program)
-        output.extend(program.output)
-        program.output = []
-    # Restore the output.
-    program.output = output
-    return program
 
 def run_until_predicate(program: Program, predicate: Callable[[List[int]], bool]) -> Tuple[Program, bool]:
     halt = False
     while not (halt or predicate(program.output)):
-        full_opcode = program.get_opcode()
+        if not program.restore:
+            full_opcode = program.get_opcode()
+        # If we are returning from a suspension after asking for input, we need
+        # to restore the prior state to know what to do with the input.
+        else:
+            full_opcode, program.opcode_memory = program.opcode_memory, None
+            program.restore = False
         opcode, parameter_modes = parse_opcode(full_opcode)
+        # If we hit an input opcode but don't yet have any input, break out and
+        # set a restore state flag + remember the current opcode.
+        if opcode == INPUT_OPCODE and not program.input:
+            program.restore = True
+            program.opcode_memory = full_opcode
+            return program, halt
         operation, n_parameters = OP_CODE_TABLE[opcode]
         # Add inferred parameter modes of zero.
         if len(parameter_modes) != n_parameters:
@@ -91,6 +97,9 @@ def run_until_predicate(program: Program, predicate: Callable[[List[int]], bool]
         parameters: List[int] = program[program.instruction_ptr + 1 : program.instruction_ptr + n_parameters + 1]
         program, halt = operation(program, parameters, parameter_modes)
     return program, halt
+
+def run(program: Program) -> Tuple[Program, int]:
+    return run_until_predicate(program, lambda x: False)
 
 def run_until_output(program: Program, output_len: int=1) -> Tuple[Program, bool]:
     predicate = lambda x: len(x) >= output_len
